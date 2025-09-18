@@ -1,100 +1,189 @@
+/* casos_ordenamiento.c
+   Mide mejor/promedio/peor caso para Bubble, Insertion y Selection.
+   Imprime operaciones (comparaciones+intercambios/movimientos) y tiempo real.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
-#define SIZE 10000
+#define SIZE 10000        // ajusta si lo necesitas
+#define AVG_TRIALS 5      // repeticiones para el "caso promedio"
 
-void generateRandomArray(int arr[], int size) {
-    for (int i = 0; i < size; i++) {
-        arr[i] = rand() % 100000;
-    }
+/* ------------------ Utilidades ------------------ */
+void copyArray(const int *src, int *dst, int n) {
+    memcpy(dst, src, n * sizeof(int));
 }
 
-void copyArray(int source[], int dest[], int size) {
-    for (int i = 0; i < size; i++) {
-        dest[i] = source[i];
-    }
+void generateBestCase(int *a, int n) {
+    for (int i = 0; i < n; ++i) a[i] = i;              // ascendente
 }
 
-void bubbleSort(int arr[], int size, long long *ops) {
-    for (int i = 0; i < size - 1; i++) {
-        for (int j = 0; j < size - i - 1; j++) {
-            (*ops)++; // Comparación
+void generateWorstCase(int *a, int n) {
+    for (int i = 0; i < n; ++i) a[i] = n - i;          // descendente
+}
+
+void generateAverageCase(int *a, int n) {
+    for (int i = 0; i < n; ++i) a[i] = rand() % 100000; // aleatorio
+}
+
+/* ------------------ Algoritmos (con conteo de ops) ------------------ */
+void bubbleSort(int *arr, int n, long long *ops) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            (*ops)++; // comparación
             if (arr[j] > arr[j + 1]) {
-                int temp = arr[j];
+                int tmp = arr[j];
                 arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-                (*ops) += 3; // Intercambio
+                arr[j + 1] = tmp;
+                (*ops) += 3; // intercambio
             }
         }
     }
 }
 
-void selectionSort(int arr[], int size, long long *ops) {
-    for (int i = 0; i < size - 1; i++) {
+void selectionSort(int *arr, int n, long long *ops) {
+    for (int i = 0; i < n - 1; i++) {
         int minIndex = i;
-        for (int j = i + 1; j < size; j++) {
-            (*ops)++; // Comparación
-            if (arr[j] < arr[minIndex]) {
-                minIndex = j;
-            }
+        for (int j = i + 1; j < n; j++) {
+            (*ops)++; // comparación
+            if (arr[j] < arr[minIndex]) minIndex = j;
         }
         if (minIndex != i) {
-            int temp = arr[i];
+            int tmp = arr[i];
             arr[i] = arr[minIndex];
-            arr[minIndex] = temp;
-            (*ops) += 3; // Intercambio
+            arr[minIndex] = tmp;
+            (*ops) += 3; // intercambio
         }
     }
 }
 
-void insertionSort(int arr[], int size, long long *ops) {
-    for (int i = 1; i < size; i++) {
+void insertionSort(int *arr, int n, long long *ops) {
+    for (int i = 1; i < n; i++) {
         int key = arr[i];
         int j = i - 1;
-        (*ops)++; 
+        (*ops)++; // comparación inicial (como en tu C)
         while (j >= 0 && arr[j] > key) {
-            (*ops)++; 
+            (*ops)++; // comparación verdadera (arr[j] > key)
             arr[j + 1] = arr[j];
             j--;
-            (*ops)++; 
+            (*ops)++; // movimiento
         }
         arr[j + 1] = key;
-        (*ops)++; 
+        (*ops)++; // inserción final
     }
 }
 
-int main() {
-    int originalArray[SIZE], arr1[SIZE], arr2[SIZE], arr3[SIZE];
-    long long opsBubble = 0, opsSelection = 0, opsInsertion = 0;
-    clock_t start, end;
-    double timeBubble, timeSelection, timeInsertion;
-    
-    srand(time(NULL));
-    generateRandomArray(originalArray, SIZE);
+/* ------------------ Medición ------------------ */
+typedef void (*sort_fn)(int*, int, long long*);
 
-    copyArray(originalArray, arr1, SIZE);
-    start = clock();
-    bubbleSort(arr1, SIZE, &opsBubble);
-    end = clock();
-    timeBubble = ((double)(end - start)) / CLOCKS_PER_SEC;
+void medir_un_caso(const char *nombre_algo,
+                   const char *nombre_caso,
+                   const int *base,
+                   sort_fn ordena,
+                   long long *ops_out,
+                   double *time_out) {
+    int *arr = (int*)malloc(SIZE * sizeof(int));
+    copyArray(base, arr, SIZE);
 
-    copyArray(originalArray, arr2, SIZE);
-    start = clock();
-    selectionSort(arr2, SIZE, &opsSelection);
-    end = clock();
-    timeSelection = ((double)(end - start)) / CLOCKS_PER_SEC;
-    
-    copyArray(originalArray, arr3, SIZE);
-    start = clock();
-    insertionSort(arr3, SIZE, &opsInsertion);
-    end = clock();
-    timeInsertion = ((double)(end - start)) / CLOCKS_PER_SEC;
+    long long ops = 0;
+    clock_t t0 = clock();
+    ordena(arr, SIZE, &ops);
+    clock_t t1 = clock();
+    free(arr);
 
-    printf("Resultados del ordenamiento:\n");
-    printf("Bubble Sort - Operaciones: %lld, Tiempo: %f segundos\n", opsBubble, timeBubble);
-    printf("Selection Sort - Operaciones: %lld, Tiempo: %f segundos\n", opsSelection, timeSelection);
-    printf("Insertion Sort - Operaciones: %lld, Tiempo: %f segundos\n", opsInsertion, timeInsertion);
-    
+    *ops_out = ops;
+    *time_out = (double)(t1 - t0) / CLOCKS_PER_SEC;
+    (void)nombre_algo; (void)nombre_caso; // evita warnings si no se usan
+}
+
+void medir_promedio(const char *nombre_algo,
+                    const int *plantilla,   // se ignora; se generan aleatorios
+                    sort_fn ordena,
+                    long long *ops_avg_out,
+                    double *time_avg_out) {
+    long long ops_sum = 0;
+    double   time_sum = 0.0;
+    (void)plantilla; // no se usa
+
+    for (int k = 0; k < AVG_TRIALS; ++k) {
+        int *arr = (int*)malloc(SIZE * sizeof(int));
+        generateAverageCase(arr, SIZE);
+
+        long long ops = 0;
+        clock_t t0 = clock();
+        ordena(arr, SIZE, &ops);
+        clock_t t1 = clock();
+
+        ops_sum  += ops;
+        time_sum += (double)(t1 - t0) / CLOCKS_PER_SEC;
+        free(arr);
+    }
+    *ops_avg_out  = ops_sum / AVG_TRIALS;
+    *time_avg_out = time_sum / AVG_TRIALS;
+    (void)nombre_algo;
+}
+
+/* ------------------ Impresión ------------------ */
+void imprimir_encabezado() {
+    printf("\nRESULTADOS (n = %d)\n", SIZE);
+    printf("Algoritmo           | Caso       | Operaciones         | Tiempo (s)\n");
+    printf("--------------------+------------+----------------------+-----------\n");
+}
+
+void imprimir_renglon(const char *alg, const char *caso, long long ops, double t) {
+    printf("%-20s | %-10s | %20lld | %9.6f\n", alg, caso, ops, t);
+}
+
+/* ------------------ Main ------------------ */
+int main(void) {
+    srand((unsigned)time(NULL));
+
+    // Arreglos base para mejor y peor caso
+    int *best = (int*)malloc(SIZE * sizeof(int));
+    int *worst = (int*)malloc(SIZE * sizeof(int));
+    generateBestCase(best, SIZE);
+    generateWorstCase(worst, SIZE);
+
+    imprimir_encabezado();
+
+    // ---- Burbuja ----
+    long long ops; double tiempo;
+
+    medir_un_caso("Burbuja", "Mejor", best, bubbleSort, &ops, &tiempo);
+    imprimir_renglon("Burbuja", "Mejor", ops, tiempo);
+
+    medir_promedio("Burbuja", NULL, bubbleSort, &ops, &tiempo);
+    imprimir_renglon("Burbuja", "Promedio", ops, tiempo);
+
+    medir_un_caso("Burbuja", "Peor", worst, bubbleSort, &ops, &tiempo);
+    imprimir_renglon("Burbuja", "Peor", ops, tiempo);
+
+    // ---- Insercion ----
+    medir_un_caso("Insercion", "Mejor", best, insertionSort, &ops, &tiempo);
+    imprimir_renglon("Insercion", "Mejor", ops, tiempo);
+
+    medir_promedio("Insercion", NULL, insertionSort, &ops, &tiempo);
+    imprimir_renglon("Insercion", "Promedio", ops, tiempo);
+
+    medir_un_caso("Insercion", "Peor", worst, insertionSort, &ops, &tiempo);
+    imprimir_renglon("Insercion", "Peor", ops, tiempo);
+
+    // ---- Seleccion ----
+    medir_un_caso("Seleccion", "Mejor", best, selectionSort, &ops, &tiempo);
+    imprimir_renglon("Seleccion", "Mejor", ops, tiempo);
+
+    medir_promedio("Seleccion", NULL, selectionSort, &ops, &tiempo);
+    imprimir_renglon("Seleccion", "Promedio", ops, tiempo);
+
+    medir_un_caso("Seleccion", "Peor", worst, selectionSort, &ops, &tiempo);
+    imprimir_renglon("Seleccion", "Peor", ops, tiempo);
+
+    free(best);
+    free(worst);
+
+    printf("\nNotas:\n");
+    printf("- 'Promedio' promedia %d corridas aleatorias distintas.\n", AVG_TRIALS);
+    printf("- El conteo de operaciones replica el criterio de tu código (comparaciones + 3 por intercambio en Burbuja/Seleccion e inserciones/movimientos en Insercion).\n");
     return 0;
 }
