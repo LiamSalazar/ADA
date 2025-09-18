@@ -1,16 +1,15 @@
-/* casos_ordenamiento.c
-   Mide mejor/promedio/peor caso para Bubble, Insertion y Selection.
-   Imprime operaciones (comparaciones+intercambios/movimientos) y tiempo real.
+/* 
+Alarcón Ruiz Sergio Fernando
+Salazar Martínez Liam Antonio
+Vargas Nicolás Bianca Celeste 
 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
-#define SIZE 10000        // ajusta si lo necesitas
-#define AVG_TRIALS 5      // repeticiones para el "caso promedio"
-
-/* ------------------ Utilidades ------------------ */
+#define SIZE 10000        
+#define AVG_TRIALS 5      
 void copyArray(const int *src, int *dst, int n) {
     memcpy(dst, src, n * sizeof(int));
 }
@@ -27,7 +26,6 @@ void generateAverageCase(int *a, int n) {
     for (int i = 0; i < n; ++i) a[i] = rand() % 100000; // aleatorio
 }
 
-/* ------------------ Algoritmos (con conteo de ops) ------------------ */
 void bubbleSort(int *arr, int n, long long *ops) {
     for (int i = 0; i < n - 1; i++) {
         for (int j = 0; j < n - i - 1; j++) {
@@ -62,7 +60,7 @@ void insertionSort(int *arr, int n, long long *ops) {
     for (int i = 1; i < n; i++) {
         int key = arr[i];
         int j = i - 1;
-        (*ops)++; // comparación inicial (como en tu C)
+        (*ops)++; 
         while (j >= 0 && arr[j] > key) {
             (*ops)++; // comparación verdadera (arr[j] > key)
             arr[j + 1] = arr[j];
@@ -74,7 +72,6 @@ void insertionSort(int *arr, int n, long long *ops) {
     }
 }
 
-/* ------------------ Medición ------------------ */
 typedef void (*sort_fn)(int*, int, long long*);
 
 void medir_un_caso(const char *nombre_algo,
@@ -94,11 +91,11 @@ void medir_un_caso(const char *nombre_algo,
 
     *ops_out = ops;
     *time_out = (double)(t1 - t0) / CLOCKS_PER_SEC;
-    (void)nombre_algo; (void)nombre_caso; // evita warnings si no se usan
+    (void)nombre_algo; (void)nombre_caso; 
 }
 
 void medir_promedio(const char *nombre_algo,
-                    const int *plantilla,   // se ignora; se generan aleatorios
+                    const int *plantilla,   
                     sort_fn ordena,
                     long long *ops_avg_out,
                     double *time_avg_out) {
@@ -124,7 +121,6 @@ void medir_promedio(const char *nombre_algo,
     (void)nombre_algo;
 }
 
-/* ------------------ Impresión ------------------ */
 void imprimir_encabezado() {
     printf("\nRESULTADOS (n = %d)\n", SIZE);
     printf("Algoritmo           | Caso       | Operaciones         | Tiempo (s)\n");
@@ -135,11 +131,9 @@ void imprimir_renglon(const char *alg, const char *caso, long long ops, double t
     printf("%-20s | %-10s | %20lld | %9.6f\n", alg, caso, ops, t);
 }
 
-/* ------------------ Main ------------------ */
 int main(void) {
     srand((unsigned)time(NULL));
 
-    // Arreglos base para mejor y peor caso
     int *best = (int*)malloc(SIZE * sizeof(int));
     int *worst = (int*)malloc(SIZE * sizeof(int));
     generateBestCase(best, SIZE);
@@ -147,7 +141,6 @@ int main(void) {
 
     imprimir_encabezado();
 
-    // ---- Burbuja ----
     long long ops; double tiempo;
 
     medir_un_caso("Burbuja", "Mejor", best, bubbleSort, &ops, &tiempo);
@@ -159,7 +152,6 @@ int main(void) {
     medir_un_caso("Burbuja", "Peor", worst, bubbleSort, &ops, &tiempo);
     imprimir_renglon("Burbuja", "Peor", ops, tiempo);
 
-    // ---- Insercion ----
     medir_un_caso("Insercion", "Mejor", best, insertionSort, &ops, &tiempo);
     imprimir_renglon("Insercion", "Mejor", ops, tiempo);
 
@@ -169,7 +161,6 @@ int main(void) {
     medir_un_caso("Insercion", "Peor", worst, insertionSort, &ops, &tiempo);
     imprimir_renglon("Insercion", "Peor", ops, tiempo);
 
-    // ---- Seleccion ----
     medir_un_caso("Seleccion", "Mejor", best, selectionSort, &ops, &tiempo);
     imprimir_renglon("Seleccion", "Mejor", ops, tiempo);
 
