@@ -77,7 +77,7 @@ typedef void (*sort_fn)(int*, int, long long*);
 void medir_un_caso(const char *nombre_algo,
                    const char *nombre_caso,
                    const int *base,
-                   sort_fn ordena,
+                    sort_fn ordena,
                    long long *ops_out,
                    double *time_out) {
     int *arr = (int*)malloc(SIZE * sizeof(int));
