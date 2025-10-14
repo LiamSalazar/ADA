@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "C_Cpp_Runner: Run",
+      "type": "process",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "gcc",
+        "sortbench.c",
+        "-o",
+        "outDebug.exe",
+        "-O2",
+        "&&",
+        "outDebug.exe",
+        "numeros.txt"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
