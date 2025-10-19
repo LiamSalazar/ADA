@@ -1,20 +1,9 @@
-// sortbench.c — Bench de Merge Sort vs Quick Sort con saltos en tamaños grandes
-// - Lee enteros de un .txt (uno por línea o separados por espacios)
-// - Prepara MEDIO (aleatorio), MEJOR (ascendente) y PEOR (descendente) una sola vez por N
-// - Reutiliza buffers y puede ejecutar escenarios en paralelo (OpenMP opcional)
-// - Omite QUICK en MEJOR a partir de 1e6 (por costo O(n^2) con pivote final)
-// - Omite QUICK en PEOR a partir de 1e6 (opcional, ajustable)
-// Compila (Windows MinGW): gcc -O3 -march=native -DNDEBUG -fopenmp -o sortbench.exe sortbench.c
-// Compila (Linux/macOS):  gcc -O3 -march=native -DNDEBUG -fopenmp -o sortbench     sortbench.c
-// Ejecuta: ./sortbench numeros.txt   (o sin arg: buscará numeros.txt en el directorio)
-
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
-/* ===== Temporizador cross-platform ===== */
 #if defined(_WIN32)
 #define NOMINMAX
 #include <windows.h>
@@ -37,11 +26,9 @@ static double timer_ms(Timer* tm){
 
 typedef struct { unsigned long long comps, moves; } Metrics;
 
-/* ===== Parámetros de flujo (puedes ajustar) ===== */
-#define SKIP_WORST_AFTER       1000000ULL   /* omite QUICK en PEOR >= 1e6 */
-#define SKIP_QSORT_BEST_AFTER  1000000ULL   /* omite QUICK en MEJOR >= 1e6 */
+#define SKIP_WORST_AFTER       1000000ULL   
+#define SKIP_QSORT_BEST_AFTER  1000000ULL   
 
-/* ===== Utilidades de casos ===== */
 static int cmp_int_asc(const void* a, const void* b){
     int x = *(const int*)a, y = *(const int*)b;
     return (x>y) - (x<y);
@@ -58,7 +45,6 @@ static void shuffle_ints(int *A, size_t n, unsigned int seed){
     }
 }
 
-/* ===== Merge Sort ===== */
 static void merge_core(int *A, int *aux, size_t l, size_t m, size_t r, Metrics *mt){
     size_t i=l, j=m, k=l;
     while(i<m && j<r){
@@ -81,7 +67,6 @@ static void mergesort_count(int *A, size_t n, Metrics *mt, int *aux){
     mergesort_rec(A, aux, 0, n, mt);
 }
 
-/* ===== Quick Sort (Lomuto iterativo, pivote final) ===== */
 typedef struct { size_t lo, hi; } Frame;
 static size_t part_lomuto(int *A, size_t lo, size_t hi, Metrics *mt){
     int pivot = A[hi];
@@ -115,7 +100,6 @@ static void quicksort_count(int *A, size_t n, Metrics *mt){
     free(st);
 }
 
-/* ===== Entrada ===== */
 static size_t load_ints_from_file(const char *path, int **out, size_t limit){
     FILE *f = fopen(path, "rb");
     if(!f) return 0;
@@ -139,7 +123,6 @@ static size_t load_ints_from_file(const char *path, int **out, size_t limit){
     return n;
 }
 
-/* ===== Impresión/benchmark ===== */
 static void print_header(void){
     printf("-----------------------------------------------------------------------------------------------\n");
     printf("        N    | CASO  | ALGORITMO |     COMPARACIONES |           MOVES |     TIEMPO\n");
@@ -184,7 +167,6 @@ int main(int argc, char **argv){
         size_t n = Ns[i];
         if(n > total) break;
 
-        /* bases por N */
         int *baseAsc  =(int*)malloc(n*sizeof(int));
         int *baseDesc =(int*)malloc(n*sizeof(int));
         int *baseRand =(int*)malloc(n*sizeof(int));
@@ -198,18 +180,15 @@ int main(int argc, char **argv){
         memcpy(baseRand, baseAsc, n*sizeof(int));
         shuffle_ints(baseRand, n, (unsigned)(1469598103U ^ (unsigned)n));
 
-        /* tareas por flujo (si no hay OpenMP, se ejecutan en serie ignorando los pragmas) */
         #pragma omp parallel
         {
             #pragma omp single nowait
             {
-                /* MEDIO */
                 #pragma omp task shared(baseRand,work,auxMerge) firstprivate(n)
                 bench_case("MEDIO","MERGE",NULL,mergesort_count, baseRand,n,work,auxMerge);
                 #pragma omp task shared(baseRand,work) firstprivate(n)
                 bench_case("MEDIO","QUICK",quicksort_count,NULL, baseRand,n,work,NULL);
 
-                /* MEJOR */
                 #pragma omp task shared(baseAsc,work,auxMerge) firstprivate(n)
                 bench_case("MEJOR","MERGE",NULL,mergesort_count, baseAsc,n,work,auxMerge);
 
@@ -219,8 +198,7 @@ int main(int argc, char **argv){
                 }else{
                     print_omitted(n, "MEJOR", "QUICK", "omitido (O(n^2) en ordenado >= 1e6)");
                 }
-
-                /* PEOR */
+                
                 #pragma omp task shared(baseDesc,work,auxMerge) firstprivate(n)
                 bench_case("PEOR","MERGE",NULL,mergesort_count, baseDesc,n,work,auxMerge);
 
